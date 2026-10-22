@@ -24,6 +24,12 @@ import com.manu.manudesignsystem.theme.ManuDesignSystem
  *
  * The content lambda receives padding values for API familiarity. This layout
  * does not automatically apply those values; apply them to the content when needed.
+ *
+ * With [safeDrawing] on (default) the whole screen is already inset for the status bar,
+ * navigation bar and keyboard. Content and bars inside it do not need their own
+ * statusBarsPadding / navigationBarsPadding / imePadding.
+ *
+ * [snackbarHost] sits just above [bottomBar], e.g. a ManuSnackbar.
  */
 @Composable
 fun ManuScaffold(
@@ -33,6 +39,7 @@ fun ManuScaffold(
     contentPadding: PaddingValues = PaddingValues(ManuDesignSystem.spacing.xl),
     topBar: (@Composable () -> Unit)? = null,
     bottomBar: (@Composable () -> Unit)? = null,
+    snackbarHost: (@Composable () -> Unit)? = null,
     content: @Composable (PaddingValues) -> Unit
 ) {
     Column(
@@ -58,6 +65,11 @@ fun ManuScaffold(
             content(contentPadding)
         }
 
+        if (snackbarHost != null) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                snackbarHost()
+            }
+        }
         if (bottomBar != null) {
             Box(modifier = Modifier.fillMaxWidth()) {
                 bottomBar()
