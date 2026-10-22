@@ -1,19 +1,16 @@
 
 package com.manu.manudesignsystem.components
 
-import androidx.compose.animation.Animatable
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,13 +19,12 @@ import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -37,19 +33,19 @@ import androidx.compose.ui.unit.sp
 import com.manu.manudesignsystem.theme.ManuDesignTokens
 
 @Composable
-fun ManuButton(
+fun ManuOutlineButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    containerColor: Color = Color.Unspecified,
-    contentColor: Color = Color.Unspecified,
-    contentPadding: PaddingValues = PaddingValues(
-        horizontal = 24.dp,
-        vertical = 14.dp
-    ),
+    borderColor: Color = MaterialTheme.colorScheme.outline,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
     content: @Composable () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val shape = RoundedCornerShape(
+        ManuDesignTokens.dimensions.buttonCornerRadius
+    )
+
     val pressScale = remember { Animatable(1f) }
 
     LaunchedEffect(interactionSource, enabled) {
@@ -58,7 +54,7 @@ fun ManuButton(
                 is PressInteraction.Press -> {
                     if (enabled) {
                         pressScale.animateTo(
-                            targetValue = 0.90f,
+                            targetValue = 0.80f,
                             animationSpec = tween(durationMillis = 70)
                         )
                     }
@@ -78,34 +74,25 @@ fun ManuButton(
         }
     }
 
-    val backgroundColor =
-        if (containerColor != Color.Unspecified) {
-            containerColor
-        } else {
-            MaterialTheme.colorScheme.primary
-        }
-
-    val foregroundColor =
-        if (contentColor != Color.Unspecified) {
-            contentColor
-        } else {
-            MaterialTheme.colorScheme.onPrimary
-        }
-
-    val shape = RoundedCornerShape(
-        ManuDesignTokens.dimensions.buttonCornerRadius
-    )
-
     Box(
         modifier = modifier
-            .scale(pressScale.value)            .defaultMinSize(
+            .graphicsLayer {
+                scaleX = pressScale.value
+                scaleY = pressScale.value
+            }
+            .defaultMinSize(
                 minHeight = ManuDesignTokens.dimensions.buttonHeight
             )
             .clip(shape)
-            .background(
-                if (enabled) backgroundColor
-                else backgroundColor.copy(alpha = 0.38f)
+            .background(Color.Transparent)
+            .border(
+                BorderStroke(
+                    1.dp,
+                    if (enabled) borderColor else borderColor.copy(alpha = 0.38f)
+                ),
+                shape
             )
+
             .clickable(
                 interactionSource = interactionSource,
                 indication = ripple(),
@@ -113,13 +100,14 @@ fun ManuButton(
                 role = Role.Button,
                 onClick = onClick
             )
-            .padding(contentPadding),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         ProvideTextStyle(
             value = TextStyle(
-                color = foregroundColor,
-                fontSize = 16.sp,
+                color = if (enabled) contentColor
+                else contentColor.copy(alpha = 0.38f),
+                fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             ),
             content = content

@@ -15,10 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalConfiguration
 import com.manu.manudesignsystem.components.ManuButton
 import com.manu.manudesignsystem.components.ManuCard
@@ -32,6 +30,24 @@ import kotlinx.coroutines.launch
 import com.manu.manudesignsystem.components.ManuListItem
 import com.manu.manudesignsystem.components.ManuMenuItem
 import com.manu.manudesignsystem.components.ManuListItemData
+import com.manu.manudesignsystem.components.ManuDialogBox
+import com.manu.manudesignsystem.components.ManuDropdownMenu
+import com.manu.manudesignsystem.components.ManuOutlineButton
+import com.manu.manudesignsystem.components.ManuTextButton
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import com.manu.manudesignsystem.components.ManuBottomSheet
+import com.manu.manudesignsystem.components.ManuDatePicker
+import com.manu.manudesignsystem.components.ManuDateRangePicker
+import com.manu.manudesignsystem.components.ManuSnackbar
+import com.manu.manudesignsystem.components.ManuSnackbarType
+import com.manu.manudesignsystem.components.ManuScaffold
+import com.manu.manudesignsystem.components.ManuScreenContainer
+import com.manu.manudesignsystem.components.ManuPickerField
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.ExpandMore
 
 
 private enum class ExplorerPage(val title: String, val group: String) {
@@ -48,6 +64,13 @@ private enum class ExplorerPage(val title: String, val group: String) {
     SWITCHES("Switches", "COMPONENTS"),
     LIST_ITEMS("List Items", "COMPONENTS"),
     LIST_CARDS("List Cards", "COMPONENTS"),
+    DIALOG_BOX("Dialog Box", "COMPONENTS"),
+    DROPDOWN_MENU("Dropdown Menu", "COMPONENTS"),
+    DATE_PICKER("Date Picker", "COMPONENTS"),
+    BOTTOM_SHEET("Bottom Sheet", "COMPONENTS"),
+    SNACKBAR("Snackbar", "COMPONENTS"),
+    SCAFFOLD("Scaffold & Screen", "COMPONENTS"),
+    PICKER_FIELD("Picker Field", "COMPONENTS"),
 }
 
 @Composable
@@ -248,6 +271,13 @@ private fun ExplorerContent(
                 ExplorerPage.SWITCHES -> SwitchesPage()
                 ExplorerPage.LIST_ITEMS -> ListItemsPage()
                 ExplorerPage.LIST_CARDS -> ListCardsPage()
+                ExplorerPage.DIALOG_BOX -> DialogBoxPage()
+                ExplorerPage.DROPDOWN_MENU -> DropdownMenuPage()
+                ExplorerPage.DATE_PICKER -> DatePickersPage()
+                ExplorerPage.BOTTOM_SHEET -> BottomSheetPage()
+                ExplorerPage.SNACKBAR -> SnackbarPage()
+                ExplorerPage.SCAFFOLD -> ScaffoldPage()
+                ExplorerPage.PICKER_FIELD -> PickerFieldPage()
             }
         }
     }
@@ -609,6 +639,363 @@ private fun ListCardsPage() {
         text = message,
         style = MaterialTheme.typography.bodySmall
     )
+}
+@Composable
+fun DialogBoxPage() {
+    var showDialog by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf("No action selected") }
+    var expanded by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Dialog & Buttons")
+
+        ManuButton(
+            onClick = { showDialog = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Show dialog")
+        }
+
+        ManuTextButton(
+            onClick = { result = "Text button clicked" }
+        ) {
+            Text("Text button")
+        }
+
+        Box {
+            ManuOutlineButton(
+                onClick = {
+                    result = "Outline button clicked"
+                    expanded = true
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Open dropdown")
+            }
+
+            ManuDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                items = listOf(
+                    ManuMenuItem("Edit", { result = "Edit selected" }),
+                    ManuMenuItem("Duplicate", { result = "Duplicate selected" }),
+                    ManuMenuItem("Delete", { result = "Delete selected" })
+                )
+            )
+        }
+        Text(result)
+    }
+
+    ManuDialogBox(
+        visible = showDialog,
+        title = "Confirm action",
+        message = "Are you sure you want to continue?",
+        confirmText = "Continue",
+        dismissText = "Cancel",
+        onConfirm = {
+            result = "Confirmed"
+            showDialog = false
+        },
+        onDismiss = {
+            result = "Cancelled"
+            showDialog = false
+        }
+    )
+}
+
+@Composable
+private fun DropdownMenuPage() {
+    var expanded by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf("No action selected") }
+
+    SectionIntro(
+        "Dropdown Menu",
+        "Popup menus with leading icons and actions."
+    )
+
+    Box {
+        ManuButton(
+            onClick = { expanded = true }
+        ) {
+            Text("Open menu")
+        }
+
+        ManuDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            items = listOf(
+                ManuMenuItem(
+                    label = "Edit",
+                    onClick = { result = "Edit selected" },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null
+                        )
+                    }
+                ),
+                ManuMenuItem(
+                    label = "Duplicate",
+                    onClick = { result = "Duplicate selected" },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.ContentCopy,
+                            contentDescription = null
+                        )
+                    }
+                ),
+                ManuMenuItem(
+                    label = "Delete",
+                    onClick = { result = "Delete selected" },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = null
+                        )
+                    }
+                )
+            )
+        )
+    }
+
+    Text(
+        text = result,
+        style = MaterialTheme.typography.bodySmall
+    )
+}
+
+@Composable
+private fun DatePickersPage() {
+
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showRangePicker by remember { mutableStateOf(false) }
+    var selectedDate by remember { mutableStateOf<Long?>(null) }
+    var selectedRange by remember {
+        mutableStateOf<Pair<Long, Long>?>(null)
+    }
+
+    ManuButton(onClick = { showDatePicker = true }) {
+        Text("Choose date")
+    }
+
+    ManuDatePicker(
+        expanded = showDatePicker,
+        onDismissRequest = { showDatePicker = false },
+        onDateSelected = { selectedDate = it }
+    )
+
+    ManuButton(onClick = { showRangePicker = true }) {
+        Text("Choose date range")
+    }
+
+    ManuDateRangePicker(
+        expanded = showRangePicker,
+        onDismissRequest = { showRangePicker = false },
+        onDateRangeSelected = { start, end ->
+            selectedRange = start to end
+        }
+    )
+
+}
+@Composable
+fun BottomSheetPage() {
+
+    var showSheet by remember { mutableStateOf(false) }
+
+    ManuButton(onClick = { showSheet = true }) {
+        Text("Open bottom sheet")
+    }
+
+    ManuBottomSheet(
+        expanded = showSheet,
+        onDismissRequest = { showSheet = false }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                "Transaction options",
+                style = MaterialTheme.typography.headlineSmall
+            )
+
+            Text("Choose an action for this transaction.")
+
+            ManuButton(
+                onClick = { showSheet = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Done")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SnackbarPage() {
+    var visible by remember { mutableStateOf(false) }
+    var snackbarType by remember { mutableStateOf(ManuSnackbarType.Info) }
+    var lastAction by remember { mutableStateOf("No action selected") }
+
+    SectionIntro(
+        "Snackbar",
+        "Brief feedback messages for actions, with optional action and auto-dismiss."
+    )
+
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ManuButton(onClick = {
+            snackbarType = ManuSnackbarType.Info
+            visible = true
+        }) { Text("Info") }
+
+        ManuButton(onClick = {
+            snackbarType = ManuSnackbarType.Success
+            visible = true
+        }) { Text("Success") }
+
+        ManuButton(onClick = {
+            snackbarType = ManuSnackbarType.Error
+            visible = true
+        }) { Text("Error") }
+    }
+
+    Spacer(Modifier.height(8.dp))
+    Text(lastAction, style = MaterialTheme.typography.bodySmall)
+
+    ManuSnackbar(
+        message = when (snackbarType) {
+            ManuSnackbarType.Info -> "This is an informational message."
+            ManuSnackbarType.Success -> "Changes saved successfully."
+            ManuSnackbarType.Error -> "Something went wrong."
+        },
+        visible = visible,
+        onDismiss = { visible = false },
+        type = snackbarType,
+        actionLabel = "Undo",
+        onAction = {
+            lastAction = "Undo action clicked"
+            visible = false
+        }
+    )
+}
+
+@Composable
+private fun ScaffoldPage() {
+    var showFooter by remember { mutableStateOf(true) }
+
+    SectionIntro(
+        "ManuScaffold & ManuScreenContainer",
+        "A consistent screen structure with optional top and bottom slots and reusable content padding."
+    )
+
+    ManuCard(modifier = Modifier.fillMaxWidth()) {
+        Text("ManuScaffold preview", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(12.dp))
+
+        ManuScaffold(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp),
+            contentPadding = PaddingValues(16.dp),
+            topBar = {
+                ManuTopBar(title = "Example screen")
+            },
+            bottomBar = {
+                if (showFooter) {
+                    Text(
+                        "Bottom bar slot",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    HorizontalDivider()
+                }
+            }
+        ) { contentPadding ->
+            ManuScreenContainer(
+                modifier = Modifier.padding(contentPadding),
+                contentPadding = PaddingValues(0.dp),
+                scrollable = true
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Screen content", style = MaterialTheme.typography.titleMedium)
+                    Text("This content is inside ManuScreenContainer.")
+                    Text("Toggle the bottom slot to preview optional screen regions.")
+                    ManuButton(
+                        onClick = { showFooter = !showFooter },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (showFooter) "Hide bottom bar" else "Show bottom bar")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PickerFieldPage() {
+    var showDatePicker by remember { mutableStateOf(false) }
+    var selectedDate by remember { mutableStateOf<Long?>(null) }
+    var showMenu by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf("Personal") }
+
+    SectionIntro(
+        "Picker Field",
+        "A read-only field that opens a date picker or selection menu managed by your screen."
+    )
+
+    ManuPickerField(
+        value = selectedDate?.let { java.text.DateFormat.getDateInstance().format(java.util.Date(it)) } ?: "",
+        onClick = { showDatePicker = true },
+        label = { Text("Transaction date") },
+        placeholder = { Text("Choose a date") },
+        leadingIcon = Icons.Default.CalendarMonth,
+        trailingIcon = Icons.Default.ExpandMore
+    )
+
+    ManuDatePicker(
+        expanded = showDatePicker,
+        onDismissRequest = { showDatePicker = false },
+        onDateSelected = {
+            selectedDate = it
+            showDatePicker = false
+        }
+    )
+
+    Spacer(Modifier.height(8.dp))
+
+    Box {
+        ManuPickerField(
+            value = selectedCategory,
+            onClick = { showMenu = true },
+            label = { Text("Category") },
+            leadingIcon = Icons.Default.Receipt,
+            trailingIcon = Icons.Default.ExpandMore
+        )
+
+        ManuDropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+            items = listOf("Personal", "Food", "Transport", "Bills").map { category ->
+                ManuMenuItem(
+                    label = category,
+                    onClick = {
+                        selectedCategory = category
+                        showMenu = false
+                    }
+                )
+            }
+        )
+    }
 }
 
 @Composable

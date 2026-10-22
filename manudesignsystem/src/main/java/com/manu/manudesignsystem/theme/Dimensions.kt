@@ -7,8 +7,8 @@ import androidx.compose.ui.unit.dp
 
 @Immutable
 data class ManuDimensions(
-    val buttonHeight: Dp = 52.dp,
-    val buttonCornerRadius: Dp = 20.dp,
+    val buttonHeight: Dp = 50.dp,
+    val buttonCornerRadius: Dp = 35.dp,
     val cardCornerRadius: Dp = 25.dp,
 
     val cardPaddingStart: Dp = 10.dp,
