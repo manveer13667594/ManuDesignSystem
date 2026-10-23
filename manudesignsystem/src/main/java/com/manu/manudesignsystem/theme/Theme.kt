@@ -1,4 +1,3 @@
-
 package com.manu.manudesignsystem.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme

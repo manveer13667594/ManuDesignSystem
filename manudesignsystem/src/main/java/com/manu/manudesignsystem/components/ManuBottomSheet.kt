@@ -1,6 +1,6 @@
 package com.manu.manudesignsystem.components
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -25,28 +25,44 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.launch
 
+/** How far (px) the sheet must be dragged down, or how fast a fling (px/s), to close it. */
+private const val DismissDistance = 140f
+private const val DismissVelocity = 1200f
+private const val OffScreen = 1500f
+
 /**
  * Bottom sheet that slides up over a dimmed screen.
  *
+ * - Drag down anywhere on the sheet to close it, including over the content. When the content is
+ *   scrollable it scrolls first; once it is at the top, pulling further down moves the sheet.
+ *   Dragging back up moves the sheet back before the content scrolls again.
  * - [scrollable]: the content scrolls when it is taller than the screen (default on). Turn it off if
- *   your content already scrolls by itself (a LazyColumn).
+ *   your content already scrolls by itself (a LazyColumn); drag-to-close still works through it.
+ *   With [scrollable] off and non-scrolling content, only the handle drags.
  * - The sheet moves up with the keyboard, so text fields inside stay visible.
- * - Drag down on the handle to dismiss. Only the handle drags, so scrolling and horizontal rows
- *   inside the content are not affected. With [dragHandle] = false there is no drag-to-dismiss.
  * - Tapping the dimmed area dismisses it ([dismissOnOutsideTap]); tapping the sheet itself does not.
  */
 @Composable
@@ -64,11 +80,66 @@ fun ManuBottomSheet(
 ) {
     if (!expanded) return
     val scope = rememberCoroutineScope()
-    val offsetY = remember { Animatable(0f) }
+    val currentOnDismiss by rememberUpdatedState(onDismissRequest)
+    // How far the sheet is pushed down from its resting place, in px. One value for drag, enter and exit.
+    var offsetPx by remember { mutableFloatStateOf(OffScreen) }
 
     LaunchedEffect(expanded) {
-        offsetY.snapTo(1500f)
-        offsetY.animateTo(0f, animationSpec = tween(220))
+        animate(OffScreen, 0f, animationSpec = tween(220)) { value, _ -> offsetPx = value }
+    }
+
+    // Let go of the sheet: close it if it was pulled far or fast enough, otherwise spring back.
+    fun release(velocityY: Float) {
+        scope.launch {
+            if (offsetPx > DismissDistance || velocityY > DismissVelocity) {
+                animate(offsetPx, OffScreen, animationSpec = tween(160)) { v, _ -> offsetPx = v }
+                currentOnDismiss()
+            } else {
+                animate(offsetPx, 0f, animationSpec = tween(180)) { v, _ -> offsetPx = v }
+            }
+        }
+    }
+
+    // Connects the content's scrolling to the sheet: leftover downward drag moves the sheet.
+    val connection = remember {
+        object : NestedScrollConnection {
+            private var flinging = false
+
+            // Dragging up while the sheet is pulled down: move the sheet back first.
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val y = available.y
+                if (!flinging && y < 0f && offsetPx > 0f && offsetPx < OffScreen / 2) {
+                    val moved = maxOf(y, -offsetPx)
+                    offsetPx += moved
+                    return Offset(0f, moved)
+                }
+                return Offset.Zero
+            }
+
+            // The content was already at the top and there is drag left over: pull the sheet down.
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                val y = available.y
+                if (!flinging && y > 0f) {
+                    offsetPx += y
+                    return Offset(0f, y)
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                flinging = true
+                if (offsetPx > 0f) {
+                    release(available.y)
+                    return available
+                }
+                return Velocity.Zero
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                flinging = false
+                return Velocity.Zero
+            }
+        }
     }
 
     Dialog(
@@ -98,43 +169,30 @@ fun ManuBottomSheet(
             Column(
                 modifier = modifier
                     .statusBarsPadding()
-                    .offset { IntOffset(0, offsetY.value.toInt()) }
+                    .offset { IntOffset(0, offsetPx.toInt()) }
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius))
                     .background(containerColor)
                     // Swallow taps so they do not reach the dimmed background underneath
                     .pointerInput(Unit) { detectTapGestures { } }
+                    .nestedScroll(connection)
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .imePadding()
                     .padding(bottom = 8.dp)
             ) {
                 if (dragHandle) {
+                    // The handle area always drags, even when the content cannot scroll.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .pointerInput(Unit) {
-                                var totalDrag = 0f
                                 detectVerticalDragGestures(
                                     onVerticalDrag = { change, dragAmount ->
                                         change.consume()
-                                        totalDrag = (totalDrag + dragAmount).coerceAtLeast(0f)
-                                        scope.launch { offsetY.snapTo(totalDrag) }
+                                        offsetPx = (offsetPx + dragAmount).coerceAtLeast(0f)
                                     },
-                                    onDragEnd = {
-                                        if (totalDrag > 140f) {
-                                            scope.launch {
-                                                offsetY.animateTo(1500f, animationSpec = tween(160))
-                                                onDismissRequest()
-                                            }
-                                        } else {
-                                            scope.launch { offsetY.animateTo(0f, animationSpec = tween(180)) }
-                                        }
-                                        totalDrag = 0f
-                                    },
-                                    onDragCancel = {
-                                        totalDrag = 0f
-                                        scope.launch { offsetY.animateTo(0f, tween(180)) }
-                                    }
+                                    onDragEnd = { release(0f) },
+                                    onDragCancel = { release(0f) }
                                 )
                             }
                             .padding(top = 12.dp, bottom = 10.dp),
